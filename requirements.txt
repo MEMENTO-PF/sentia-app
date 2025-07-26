@@ -6,4 +6,5 @@ plotly
 wordcloud
 matplotlib
 mecab-python3
+unidic
 unidic-lite

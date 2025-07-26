@@ -8,18 +8,21 @@ import matplotlib.font_manager as fm
 import io
 import os
 
-# unidicのインポートをtry-exceptで囲む（エラー時は画面に表示して処理停止）
+# unidicの辞書がない場合は自動ダウンロード
 try:
     import unidic
-except Exception as e:
-    st.error(f"unidicのインポートでエラーが発生しました:\n{e}")
+    mecab_dic_path = unidic.DICDIR
+except ModuleNotFoundError:
+    st.error("unidicモジュールが見つかりません。requirements.txtにunidicを追加してください。")
     st.stop()
-
+except Exception:
+    import unidic
+    with st.spinner("unidic辞書をダウンロード中... 初回のみ時間がかかります"):
+        unidic.download()
+    mecab_dic_path = unidic.DICDIR
 
 @st.cache_resource(show_spinner=False)
 def load_sentiment_model():
-    # MeCab辞書のパスをunidic-liteから取得
-    mecab_dic_path = unidic.DICDIR
     tokenizer = BertJapaneseTokenizer.from_pretrained(
         "koheiduck/bert-japanese-finetuned-sentiment",
         mecab_kwargs={"mecab_args": f"-d {mecab_dic_path}"}
@@ -30,7 +33,6 @@ def load_sentiment_model():
         tokenizer=tokenizer,
         return_all_scores=True,
     )
-
 
 model = load_sentiment_model()
 
@@ -188,19 +190,8 @@ if uploaded_files:
             if date_col and date_col in df.columns:
                 st.write("### 感情の時系列推移")
                 df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
-                time_df = (
-                    df.dropna(subset=[date_col])
-                      .groupby([df[date_col].dt.date, "感情判定"])
-                      .size()
-                      .reset_index(name="件数")
-                )
-                fig_line = px.line(
-                    time_df,
-                    x=date_col,
-                    y="件数",
-                    color="感情判定",
-                    title="感情の時系列推移"
-                )
+                time_df = df.dropna(subset=[date_col]).groupby([df[date_col].dt.date, "感情判定"]).size().reset_index(name="件数")
+                fig_line = px.line(time_df, x=date_col, y="件数", color="感情判定", title="感情の時系列推移")
                 st.plotly_chart(fig_line, use_container_width=True)
 
             st.write("### 抜粋サンプル")
