@@ -6,8 +6,15 @@ from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import io
-import unidic
 import os
+
+# unidicのインポートをtry-exceptで囲む（エラー時は画面に表示して処理停止）
+try:
+    import unidic
+except Exception as e:
+    st.error(f"unidicのインポートでエラーが発生しました:\n{e}")
+    st.stop()
+
 
 @st.cache_resource(show_spinner=False)
 def load_sentiment_model():
@@ -23,6 +30,7 @@ def load_sentiment_model():
         tokenizer=tokenizer,
         return_all_scores=True,
     )
+
 
 model = load_sentiment_model()
 
@@ -180,8 +188,19 @@ if uploaded_files:
             if date_col and date_col in df.columns:
                 st.write("### 感情の時系列推移")
                 df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
-                time_df = df.dropna(subset=[date_col]).groupby([df[date_col].dt.date, "感情判定"]).size().reset_index(name="件数")
-                fig_line = px.line(time_df, x=date_col, y="件数", color="感情判定", title="感情の時系列推移")
+                time_df = (
+                    df.dropna(subset=[date_col])
+                      .groupby([df[date_col].dt.date, "感情判定"])
+                      .size()
+                      .reset_index(name="件数")
+                )
+                fig_line = px.line(
+                    time_df,
+                    x=date_col,
+                    y="件数",
+                    color="感情判定",
+                    title="感情の時系列推移"
+                )
                 st.plotly_chart(fig_line, use_container_width=True)
 
             st.write("### 抜粋サンプル")
