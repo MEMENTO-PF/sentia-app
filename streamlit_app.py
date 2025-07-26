@@ -1,15 +1,28 @@
 import streamlit as st
 import pandas as pd
-from transformers import pipeline
+from transformers import pipeline, BertJapaneseTokenizer
 import plotly.express as px
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import io
+import unidic
+import os
 
 @st.cache_resource(show_spinner=False)
 def load_sentiment_model():
-    return pipeline("sentiment-analysis", model="koheiduck/bert-japanese-finetuned-sentiment", return_all_scores=True)
+    # MeCab辞書のパスをunidic-liteから取得
+    mecab_dic_path = unidic.DICDIR
+    tokenizer = BertJapaneseTokenizer.from_pretrained(
+        "koheiduck/bert-japanese-finetuned-sentiment",
+        mecab_kwargs={"mecab_args": f"-d {mecab_dic_path}"}
+    )
+    return pipeline(
+        "sentiment-analysis",
+        model="koheiduck/bert-japanese-finetuned-sentiment",
+        tokenizer=tokenizer,
+        return_all_scores=True,
+    )
 
 model = load_sentiment_model()
 
@@ -84,12 +97,6 @@ label_map = {
     "NEUTRAL": "中立"
 }
 
-color_map = {
-    "ポジティブ": "#22c55e",  # 緑系
-    "ネガティブ": "#ef4444",  # 赤系
-    "中立": "#6b7280"         # グレー系
-}
-
 if uploaded_files:
     for uploaded_file in uploaded_files:
         df = pd.read_excel(uploaded_file)
@@ -132,7 +139,11 @@ if uploaded_files:
                 names="感情判定",
                 title="感情内訳",
                 color="感情判定",
-                color_discrete_map=color_map
+                color_discrete_map={
+                    "ポジティブ": "#2ecc71",  # 緑系
+                    "ネガティブ": "#e74c3c",  # 赤系
+                    "中立": "#95a5a6",       # グレー系
+                },
             )
             st.plotly_chart(fig, use_container_width=True)
 

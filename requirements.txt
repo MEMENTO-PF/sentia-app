@@ -3,5 +3,7 @@ transformers
 torch
 pandas
 plotly
-matplotlib
 wordcloud
+matplotlib
+mecab-python3
+unidic-lite
